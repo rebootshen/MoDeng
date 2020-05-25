@@ -1,2 +1,2 @@
-C:\MoDengPython\python.exe modeng.py
+python modeng.py
 pause

@@ -692,7 +692,7 @@ class RetestReseau:
 if __name__ == '__main__':
 
 
-    r = RetestReseau(stk_code='603421', retest_span=5, start_date='2019-01-01', end_date='2019-03-10', debug=True)
+    r = RetestReseau(stk_code='002065', retest_span=5, start_date='2019-05-22', end_date='2020-05-22', debug=True)
 
     # 增加动态网格
     r.add_reseau()
