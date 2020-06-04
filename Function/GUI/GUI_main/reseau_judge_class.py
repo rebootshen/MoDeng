@@ -196,6 +196,8 @@ class ReseauJudge:
         self.thh_sale = earn_threshold_unit * 2 * rsv_stk
         self.thh_buy = earn_threshold_unit * 2 * (1 - rsv_stk)
 
+        str1_ = '\nearn_threshold_unit:' + '%0.3f' % earn_threshold_unit + '\nrsv_stk:' + '%0.3f' % rsv_stk + '\nthh_buy = earn_threshold_unit * 2 * (1 - rsv_stk)' +'\n'
+        self.add_msg(str1_)
         str_ = '\n卖出网格大小:' + '%0.3f' % self.thh_sale + '\n买入网格大小:' + '%0.3f' % self.thh_buy + '\n'
         debug_print_txt('stk_judge', self.stk_code, str_, self.debug)
         self.add_msg(str_)

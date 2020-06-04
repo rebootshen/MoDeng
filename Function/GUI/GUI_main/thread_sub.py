@@ -574,7 +574,7 @@ def on_timer_ctrl(win, rsv_, debug=False):
             id=MSG_UPDATE_ID_A,
             data='控制台定时器：当前不属于交易时间！\n'))
 
-        return
+        #return
 
     buy_stk_list = list(set(read_config()['buy_stk'] + read_config()['index_stk']))
 

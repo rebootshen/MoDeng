@@ -1,7 +1,7 @@
 # encoding=utf-8
 import os
 
-config_path = 'c:/MoDeng/'
+config_path = 'C:/Users/Sam/Documents/git/MoDeng/json/'
 data_source_url = config_path+'data_source.json'
 stk_config_url = config_path+'stk_config.json'
 data_dir = config_path + 'data/'
