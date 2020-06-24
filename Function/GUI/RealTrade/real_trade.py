@@ -14,9 +14,9 @@ class RealTrade:
         #print(result)
         #debug_print_txt('main_log', '', str(result[0]) + ' \n inside check_status \n',True)
         return_str = []
-        return_str = self.user.position()
-        print(result_str)
-        #debug_print_txt('main_log', '', str(result[0]) + ' \n inside check_status \n',True)
+        return_str = self.user.position   # Don't add (), otherwise will cause error!
+        print(return_str)
+        debug_print_txt('main_log', '', str(return_str) + ' \n inside check_status \n',True)
 
     def buy(self, security, amount, price):
         """
