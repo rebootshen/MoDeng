@@ -17,6 +17,7 @@ class OptRecord:
         # 用来初始化的格式
         self.opt_dict_init = {
             'b_opt': [],
+            's_opt': [],
             'p_last': None,
             'has_flashed_flag': True,
             'total_earn': 0,
@@ -60,6 +61,20 @@ class OptRecord:
             b_opt = b_opt.append(dict(time=get_current_datetime_str(), p=price, amount=amount))
 
         self.set_config_value('b_opt', b_opt)
+
+    def add_s_opt(self, price, amount):
+        """
+        记录卖出操作
+        :return:
+        """
+        s_opt = self.get_config_value('s_opt')
+
+        if pd.isnull(s_opt):
+            s_opt = [dict(time=get_current_datetime_str(), p=price, amount=amount)]
+        else:
+            s_opt = s_opt.append(dict(time=get_current_datetime_str(), p=price, amount=amount))
+
+        self.set_config_value('s_opt', s_opt)
 
     def read_json(self):
         """

@@ -16,21 +16,13 @@ from Function.SeaSelect.Sub.select_cmd_class import SelectCmd
 from Global_Value.file_dir import  opt_record
 from Global_Value.thread_lock import opt_record_lock
 
-from Function.GUI.RealTrade.real_trade import RealTrade
-rt = RealTrade()
-
-try:
-    from Function.LSTM.AboutLSTM.Test.TomorrowPredict import predict_tomorrow_index
-
-except Exception as e:
-    print('有关lstm相关的代码没有导入成功，相关功能将受限，具体原因：\n' + str(e))
 
 from pylab import *
 
 # opt_record.json文件读写锁
 from SDK.MyTimeOPT import get_current_datetime_str
 
-opt_record_file_url = data_dir + '\opt_record.json'
+opt_record_file_url = data_dir + 'easytrader_record.json'
 
 
 class StkConfig:
@@ -104,9 +96,9 @@ class StkConfig:
 
         text_append_color(tc, stk_name.replace('[', '').replace(']', '').replace(',', '\n'))
 
-class DengShen(wx.Frame):
+class RealTrade(wx.Frame):
     def __init__(self, parent, title):
-        super(DengShen, self).__init__(parent, title=title, size=(700, 500))
+        super(RealTrade, self).__init__(parent, title=title, size=(700, 500))
 
         # 绑定关闭函数
         self.Bind(wx.EVT_CLOSE, self.on_close, parent)
@@ -145,80 +137,24 @@ class DengShen(wx.Frame):
             # 向配置文件中写入 增加持仓的stk代码
             StkConfig.delete_stk(kind='buy_stk', name=ipt_split[1], tc=self.t3)
 
-        elif '增加关注' in input_str:
-            ipt_split = input_str.split(' ')
-
-            # 向配置文件中写入 增加持仓的stk代码
-            StkConfig.add_stk(kind='concerned_stk', name=ipt_split[1], tc=self.t3)
-
-        elif '查看记录' in input_str:
-            ipt_split = input_str.split(' ')
-
-            # 画图该stk的操作记录
-            plot_opt(stk_code=name2code(ipt_split[1]), tc=self.t3, opt_record=opt_record)
-
-        elif '删除关注' in input_str:
-            ipt_split = input_str.split(' ')
-
-            StkConfig.delete_stk(kind='concerned_stk', name=ipt_split[1], tc=self.t3)
-
-        elif '查看关注' in input_str:
-            StkConfig.cat_stk(kind='concerned_stk', tc=self.t3)
-
-        elif '查看持仓' in input_str:
-            StkConfig.cat_stk(kind='buy_stk', tc=self.t3)
-
-        elif '预测明日大盘' in input_str:
-
-            # 启动数据处理线程，专用于处理数据，防止软件操作卡顿
-            index_predict_thread = threading.Thread(target=predict_tomorrow_index, args=(self.t3, False))
-            index_predict_thread.start()
-
-        elif '清理' == input_str:
-            self.t3.SetValue('')
-
-        elif '帮助' == input_str:
-            text_append_color(self.t3, total_cmd)
 
         elif ('买入' in input_str) | ('卖出' in input_str):
             add_opt(input_str, opt_record_file_url, self.t3)
-
-        elif ('真买' in input_str) | ('真卖' in input_str):
-            add_real_trade(input_str, opt_record_file_url, self.t3)
 
         elif '查看b记录' in input_str:
             cat_stk_opt_record(
                 input_str=input_str,
                 json_file_url=opt_record_file_url,
                 tc=self.t3)
-        elif '规则' in input_str:
-            sc = SelectCmd()
-            text_append_color(self.t3, sc.rule_input_pro(input_str))
-
-        elif '执行海选' == input_str:
-
-            def sea_select_thread(tc):
-                try:
-                    jq_login()
-                    sc = ExecuteSelectRole()
-                    sc.sea_select(tc)
-
-                except Exception as e_:
-                    text_append_color(tc, '海选功能执行失败！原因：\n%s\n' % str(e_))
-                finally:
-                    text_append_color(tc, '\n请输入命令：\n', color=wx.YELLOW)
-
-            # 启动数据处理线程，专用于处理数据，防止软件操作卡顿
-            sea_select_thread = threading.Thread(target=sea_select_thread, args=(self.t3,))
-            sea_select_thread.start()
-
+       
         else:
             text_append_color(self.t3, '没听懂，请明示！')
 
+    
     def on_close(self, event):
         print('进入关闭响应函数！')
-        global dengshen_on
-        dengshen_on = False
+        global realtrade_on
+        realtrade_on = False
 
         event.Skip()
 
@@ -234,29 +170,10 @@ class DengShen(wx.Frame):
             self.input_analysis(input_str)
             text_append_color(self.t3, '\n请输入命令：\n', color=wx.YELLOW)
         except Exception as e_:
-            text_append_color(self.t3, '灯神出错了！原因：\n' + str(e_) + '\n\n')
+            text_append_color(self.t3, 'realtrade出错了！原因：\n' + str(e_) + '\n\n')
             text_append_color(self.t3, '\n请输入命令：\n', color=wx.YELLOW)
 
 
-def plot_opt(stk_code, opt_record, tc):
-    if len(opt_record) == 0:
-        text_append_color(tc, code2name(stk_code) + '：没有操作记录！')
-        return
-
-    df = pd.DataFrame(opt_record).set_index('date_time')
-
-    # 筛选
-    df = df[df['stk_code'] == stk_code]
-
-    if df.empty:
-        text_append_color(tc, code2name(stk_code) + '：没有操作记录！')
-
-    # 计算上下限
-    df['sale_pot'] = df.apply(lambda x: x['p_last'] + x['sale_reseau'], axis=1)
-    df['buy_pot'] = df.apply(lambda x: x['p_last'] + x['buy_reseau'], axis=1)
-
-    df.loc[:, ['p_last', 'p_now', 'buy_pot', 'sale_pot']].plot(style=['*', '*', '^--', '^--'])
-    plt.show()
 
 
 def cat_stk_opt_record(input_str, json_file_url, tc):
@@ -265,7 +182,7 @@ def cat_stk_opt_record(input_str, json_file_url, tc):
         try:
             r = cat_stk_b_opt_sub(stk_name=input_str.split(' ')[1], json_file_url=json_file_url)
         except Exception as e:
-            r = '读写opt_record.json文件失败！原因：\n' + str(e)
+            r = '读写' + json_file_url + '文件失败！原因：\n' + str(e)
         finally:
             opt_record_lock.release()
             text_append_color(tc, r + '\n')
@@ -307,42 +224,6 @@ def add_opt(input_str, json_file_url, tc):
             opt_record_lock.release()
             for str_ in r:
                 text_append_color(tc, str_ + '\n')
-
-def add_real_trade(input_str, json_file_url, tc):
-    if opt_record_lock.acquire():
-        r = ['未知错误']
-        try:
-            r = add_real_trade_to_json_sub(input_str, json_file_url, tc)
-
-        except Exception as e:
-            r = ['读写opt_record.json文件失败！原因：\n' + str(e)]
-        finally:
-            opt_record_lock.release()
-            for str_ in r:
-                text_append_color(tc, str_ + '\n')
-
-def add_real_trade_to_json_sub(input_str, json_file_url_, tc):
-    # 返回字符串
-    return_str = []
-
-    # 解析输入
-    stk_name, opt, amount, p = input_str.split(' ')
-    stk_code = name2code(stk_name)
-    p, amount = float(p), float(amount)
-    
-    # 对输入格式进行检查
-    if amount % 100 != 0:
-        tc.AppendText('格式错误！参考格式：\n美的集团 卖出 400 51.3')
-        return
-
-    if opt == '真买':
-        rt.buy(stk_code, amount, p)
-
-    if opt == '真卖':
-        rt.sell(stk_code, amount, p)
-
-    # 返回
-    return return_str
 
 
 def add_opt_to_json_sub(input_str, json_file_url_, tc):
@@ -451,7 +332,10 @@ def sale_stk_sub(stk_record, s_amount, s_p, tc):
     return opt_r_stk, earn_this
 
 
+
+
 if __name__ == '__main__':
     app = wx.App()
-    DengShen(None, '灯神')
+    RealTrade(None, 'easytrader')
+    this.input_analysis(self, "查看b记录")
     app.MainLoop()

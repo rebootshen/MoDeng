@@ -6,7 +6,7 @@ from Config.Sub import read_config
 from DataSource.Code2Name import code2name
 from DataSource.Data_Sub import get_current_price_JQ
 from Function.GUI.GUI_main.opt_record_class import OptRecord
-from Global_Value.file_dir import opt_record, opt_record_file_url, json_file_url
+from Global_Value.file_dir import opt_record, opt_record_file_url, json_file_url, easytrader_record_file_url
 from Global_Value.p_diff_ratio_last import RSV_Record
 from Global_Value.thread_lock import opt_lock
 from SDK.Debug_Sub import debug_print_txt
@@ -33,6 +33,9 @@ class ReseauJudge:
         self.opt_record_stk = {}
 
         self.current_price = -1
+        self.buy_price = -1
+        self.sell_price = -1
+
         self.last_p = -1
         self.b_p_min = -1
 
@@ -124,6 +127,31 @@ class ReseauJudge:
         else:
             return 2
 
+    @staticmethod
+    def set_has_flashed_flag(opt_record_file_url_, stk_code, value=True):
+        if os.path.exists(opt_record_file_url_):
+            with open(opt_record_file_url_, 'r') as f:
+                json_p = json.load(f)
+
+            if stk_code in json_p.keys():
+                json_p[stk_code]['has_flashed_flag'] = value
+            else:
+                json_p[stk_code] = {
+                    'b_opt': [],
+                    'p_last': None,
+                    'has_flashed_flag': value,
+                    'total_earn': 0
+                }
+
+            # 将数据写入
+            with open(opt_record_file_url_, 'w') as f:
+                json.dump(json_p, f)
+
+            return 0
+        else:
+            return 2
+
+
     def did_have_flashed(self):
         """
 		判断是否已经提示过
@@ -187,6 +215,7 @@ class ReseauJudge:
         """ 实时计算网格大小 """
         reseau = Reseau()
         earn_threshold_unit = reseau.get_single_stk_reseau(self.stk_code)
+        stk_name = code2name(self.stk_code)
 
         rsv.msg = ''
         rsv_stk = rsv.get_stk_rsv(self.stk_code)
@@ -196,11 +225,95 @@ class ReseauJudge:
         self.thh_sale = earn_threshold_unit * 2 * rsv_stk
         self.thh_buy = earn_threshold_unit * 2 * (1 - rsv_stk)
 
+        self.buy_price =self.current_price - self.thh_buy
+        self.sell_price = self.thh_sale + self.current_price
+
         str1_ = '\nearn_threshold_unit:' + '%0.3f' % earn_threshold_unit + '\nrsv_stk:' + '%0.3f' % rsv_stk + '\nthh_buy = earn_threshold_unit * 2 * (1 - rsv_stk)' +'\n'
         self.add_msg(str1_)
+        str2_ = '\nstk_code:' + self.stk_code +'\ncurrent_price:' + '%0.3f' % self.current_price + '\n' + stk_name + ' 真卖 5000 ' + '%0.3f' % self.sell_price + '\n' + stk_name + ' 真买 5000 ' + '%0.3f' % self.buy_price + '\n'
+        self.add_msg(str2_)
+        #self.add_note(str2_)
         str_ = '\n卖出网格大小:' + '%0.3f' % self.thh_sale + '\n买入网格大小:' + '%0.3f' % self.thh_buy + '\n'
         debug_print_txt('stk_judge', self.stk_code, str_, self.debug)
         self.add_msg(str_)
+
+
+    def prepare_trade_record(self, input_str, json_file_url_):
+        # 返回字符串
+        return_str = []
+
+        # 已有文件，打开读取
+        if os.path.exists(json_file_url_):
+            with open(json_file_url_, 'r') as _f:
+                _opt_record = json.load(_f)
+        else:
+            _opt_record = {}
+
+        # 解析输入
+        stk_code, opt, amount, p = input_str.split(' ')
+        #stk_code = name2code(stk_name)
+        stk_name = code2name(stk_code)
+        p, amount = float(p), float(amount)
+        
+        # 对输入格式进行检查
+        debug_print_txt('main_log', '', input_str  +' ' + json_file_url_ + 'inside prepare_trade_record \n',True)
+        if amount % 100 != 0:
+            #tc.AppendText('格式错误！参考格式：\n美的集团 卖出 400 51.3')
+            return
+
+        if stk_code in _opt_record.keys():
+            opt_r_stk = _opt_record[stk_code]
+        else:
+            opt_r_stk = {
+                'b_opt': [],
+                's_opt': [],
+                'b_suggest': None,
+                's_suggest': None,
+                'p_last': None,
+                'has_flashed_flag': False,
+                'total_earn': 0,
+                'last_prompt_point': -1
+            }
+
+        if opt == '买入':
+            opt_r_stk['b_opt'].clear()
+            opt_r_stk['b_opt'].append(dict(time=get_current_datetime_str(), p=p, amount=amount))
+            opt_r_stk['b_suggest'] = stk_name + ' 真买 ' + '%0.0f' % amount + ' ' + str(p)
+
+        if opt == '卖出':
+            #if len(opt_r_stk['b_opt']) > 0:
+            opt_r_stk['s_opt'].clear()
+            opt_r_stk['s_opt'].append(dict(time=get_current_datetime_str(), p=p, amount=amount))
+            opt_r_stk['s_suggest'] = stk_name + ' 真卖 ' + '%0.0f' % amount + ' ' + str(p)
+                #opt_r_stk, earn_this = sale_stk_sub(opt_r_stk, amount, p, tc)
+                #return_str.append('earn：' + str(earn_this) + '\n')
+
+        opt_r_stk['p_last'] = p
+        opt_r_stk['has_flashed_flag'] = False
+
+        
+        # 保存数据
+        _opt_record[stk_code] = opt_r_stk
+        with open(json_file_url_, 'w') as _f:
+            #json.dump(_opt_record, _f)
+            json.dump(_opt_record, _f, ensure_ascii=False, indent = 2, separators=(',', ': '))
+
+        # 返回
+        debug_print_txt('main_log', '', stk_code  +' end of prepare_trade_record \n',True)
+        return return_str
+
+    def generate_trade_records(self):
+        debug_print_txt('main_log', '', self.stk_code + ' inside generate_trade_records \n',True)
+        
+        str2_ = '\nstk_code:' + self.stk_code +'\ncurrent_price:' + '%0.3f' % self.current_price + '\n卖出:' + '%0.3f' % self.sell_price + '\n买入:' + '%0.3f' % self.buy_price + '\n'
+        self.add_msg(str2_)
+        debug_print_txt('main_log', '', str2_ + ' end of generate_trade_records \n',True)
+        buy_input_str = self.stk_code + " 买入 5000 " + '%0.3f' % self.buy_price
+        sell_input_str = self.stk_code + " 卖出 5000 " + '%0.3f' % self.sell_price
+        self.prepare_trade_record(buy_input_str, easytrader_record_file_url)
+        self.prepare_trade_record(sell_input_str, easytrader_record_file_url)
+        debug_print_txt('main_log', '', self.stk_code + ' end of generate_trade_records \n',True)
+        
 
     def get_pcr(self):
         self.pcr = read_config()['pcr'] / 100.0
