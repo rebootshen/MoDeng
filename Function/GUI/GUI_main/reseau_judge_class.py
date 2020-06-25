@@ -274,16 +274,19 @@ class ReseauJudge:
                 'total_earn': 0,
                 'last_prompt_point': -1
             }
+        # 初步只支持每日一次操作
+        if opt_r_stk['has_flashed_flag'] == True:
+            return
 
         if opt == '买入':
             opt_r_stk['b_opt'].clear()
-            opt_r_stk['b_opt'].append(dict(time=get_current_datetime_str(), p=p, amount=amount))
+            opt_r_stk['b_opt'].append(dict(time=get_current_datetime_str(), p=p, amount=amount, status='PRICE', entrust_no=0))
             opt_r_stk['b_suggest'] = stk_name + ' 真买 ' + '%0.0f' % amount + ' ' + str(p)
 
         if opt == '卖出':
             #if len(opt_r_stk['b_opt']) > 0:
             opt_r_stk['s_opt'].clear()
-            opt_r_stk['s_opt'].append(dict(time=get_current_datetime_str(), p=p, amount=amount))
+            opt_r_stk['s_opt'].append(dict(time=get_current_datetime_str(), p=p, amount=amount, status='PRICE', entrust_no=0))
             opt_r_stk['s_suggest'] = stk_name + ' 真卖 ' + '%0.0f' % amount + ' ' + str(p)
                 #opt_r_stk, earn_this = sale_stk_sub(opt_r_stk, amount, p, tc)
                 #return_str.append('earn：' + str(earn_this) + '\n')

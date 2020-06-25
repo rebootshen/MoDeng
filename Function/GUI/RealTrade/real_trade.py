@@ -10,6 +10,7 @@ class RealTrade:
         self.user = easytrader.use('yh_client')
         self.user.prepare(yh_client_file_url)
         self.current_record = {}
+        self.today_done = {}
         self.opt_dict_init = {
             'b_opt': [],
             's_opt': [],
@@ -22,9 +23,16 @@ class RealTrade:
         #print(result)
         #debug_print_txt('main_log', '', str(result[0]) + ' \n inside check_status \n',True)
         return_str = []
-        new_str = []
+        today_opt = []
         return_str = self.user.position   # Don't add (), otherwise will cause error!
         pprint.pprint(return_str)
+
+        today_opt = self.user.today_entrusts
+        print("today_opt:" + str(today_opt))  
+
+        self.today_done = self.user.today_trades
+        print("today_done:" + str(self.today_done))  
+
         length = len(return_str)
         for i in range(length):
             stk_code = return_str[i]['证券代码']
@@ -37,6 +45,7 @@ class RealTrade:
         #print(self.current_record.keys())
         debug_print_txt('main_log', '', str(return_str) + ' \n inside check_status \n',True)
         debug_print_txt('main_log', '', str(self.current_record) + ' \n inside check_status \n',True)
+        debug_print_txt('main_log', '', str(today_opt) + ' \n inside check_status \n',True)
         return self.current_record
 
     def buy(self, security, amount, price):
@@ -44,12 +53,14 @@ class RealTrade:
         """
         result = self.user.buy(security, price, amount)  # 买入股票
         print(result)
+        return(result)
 
     def sell(self, security, amount, price):
         """
         """
         result = self.user.sell(security, price, amount)  # 卖出股票
         print(result)
+        return(result)
 
     def sendout_trade_record(self, json_file_url_):
         #debug_print_txt('main_log', '',' inside sendout_trade_record \n',True)
@@ -70,18 +81,26 @@ class RealTrade:
 
         for stk_code in _opt_record.keys(): 
             opt_r_stk = _opt_record[stk_code]
-            opt_r_stk['has_flashed_flag'] = False
+            bb = {}
+            ss = {}
  
             #debug_print_txt('main_log', '', stk_code  +' len:' +str(len(opt_r_stk['b_opt'])) +' buy sendout_trade_record \n',True)
-            if len(opt_r_stk['b_opt']) != 0 and opt_r_stk['has_flashed_flag'] == False:
+            if len(opt_r_stk['b_opt']) != 0 and opt_r_stk['b_opt'][0]['status'] == 'PRICE':
                 debug_print_txt('main_log', '', stk_code + ' amount:' + str(opt_r_stk['b_opt'][0]['amount'])  + ' buy price:' + str(opt_r_stk['b_opt'][0]['p']) + ' buy sendout_trade_record \n',True)
-                #self.buy(stk_code, opt_r_stk['b_opt'][0]['amount'],  opt_r_stk['b_opt'][0]['p'])
-            
+                bb = self.buy(stk_code, opt_r_stk['b_opt'][0]['amount'],  opt_r_stk['b_opt'][0]['p'])
+                print("buy return:" + str(bb))
+                opt_r_stk['b_opt'][0]['status'] = 'ORDER'
+                opt_r_stk['b_opt'][0]['entrust_no'] = bb['entrust_no']
+
+            #
             #debug_print_txt('main_log', '', stk_code  +' len:' +str(len(opt_r_stk['s_opt'])) +' sell sendout_trade_record \n',True)
-            if stk_code in current_record.keys() and current_record[stk_code]['usable_balance'] > 5000:
-                if len(opt_r_stk['s_opt']) != 0 and opt_r_stk['has_flashed_flag'] == False:
+            if stk_code in current_record.keys() and current_record[stk_code]['usable_balance'] > opt_r_stk['s_opt'][0]['amount']:
+                if len(opt_r_stk['s_opt']) != 0 and opt_r_stk['s_opt'][0]['status'] == 'PRICE':
                     debug_print_txt('main_log', '', stk_code + ' amount:' + str(opt_r_stk['s_opt'][0]['amount'])  + ' sell price:' + str(opt_r_stk['s_opt'][0]['p']) + ' sell sendout_trade_record \n',True)
-                    #self.sell(stk_code, opt_r_stk['s_opt'][0]['amount'],  opt_r_stk['s_opt'][0]['p'])
+                    ss = self.sell(stk_code, opt_r_stk['s_opt'][0]['amount'],  opt_r_stk['s_opt'][0]['p'])
+                    print("sell return:" + str(ss))
+                    opt_r_stk['s_opt'][0]['status'] = 'ORDER'
+                    opt_r_stk['s_opt'][0]['entrust_no'] = ss['entrust_no']
 
             opt_r_stk['has_flashed_flag'] = True
             _opt_record[stk_code] = opt_r_stk
@@ -89,7 +108,8 @@ class RealTrade:
         # 保存数据
         
         with open(json_file_url_, 'w') as _f:
-            json.dump(_opt_record, _f)
+            #json.dump(_opt_record, _f)
+            json.dump(_opt_record, _f, ensure_ascii=False, indent = 2, separators=(',', ': '))
 
         # 返回
         #debug_print_txt('main_log', '', stk_code  +' end of sendout_trade_record \n',True)
@@ -106,6 +126,7 @@ if __name__ == "__main__":
     #user.prepare('yh_client.json')
     rt = RealTrade()
     rt.check_status()
+
     #rt.buy("600095", 5000, 10.22)
     #rt.sell("600095", 5000, 10.83)
 
