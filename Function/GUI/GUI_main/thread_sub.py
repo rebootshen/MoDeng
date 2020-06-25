@@ -597,7 +597,7 @@ def on_timer_ctrl(win, rsv_, debug=False):
     # 打印日志
     debug_print_txt('timer_ctrl_log', 'total',
                     get_current_datetime_str() + ':\n' +
-                    '提示消息：\n' + str(note_list) + '\n' + '流水消息：\n' + str(str_gui_['msg']),True)
+                    '提示消息：\n' + str(note_list) + '\n' + '流水消息：\n' + str(str_gui_['msg']),debug)
 
     # 根据情况打印提示信息，并闪动
     if len(note_list):
@@ -907,7 +907,7 @@ def judge_single_stk(stk_code, rsv_, debug=False):
     reseau_judge = ReseauJudge(stk_code=stk_code,
                                opt_record_=OptRecord(opt_record_file_url_=opt_record_file_url, stk_code=stk_code),
                                debug=debug)
-    debug_print_txt('main_log', '', stk_code + 'inside judge_single_stk \n',True)
+    #debug_print_txt('main_log', '', stk_code + 'inside judge_single_stk \n',True)
     # 获取实时价格
     if not reseau_judge.get_current_price():
         return reseau_judge.str_gui
@@ -919,16 +919,12 @@ def judge_single_stk(stk_code, rsv_, debug=False):
     reseau_judge.fluctuate_judge()
 
     # 实时操作easytrader
-    
-    debug_print_txt('main_log', '', stk_code + 'before generate_trade_records \n',True)
     reseau_judge.generate_trade_records()
 
-    debug_print_txt('main_log', '', stk_code + 'after generate_trade_records\n',True)
     # 获取配置信息
     if not reseau_judge.get_opt_record_json():
         return reseau_judge.str_gui
 
-    debug_print_txt('main_log', '', stk_code + 'after get_opt_record_json \n',True)
     # 读取已提示标志位
     reseau_judge.did_have_flashed()
 

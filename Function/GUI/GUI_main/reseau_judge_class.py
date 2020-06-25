@@ -256,7 +256,7 @@ class ReseauJudge:
         p, amount = float(p), float(amount)
         
         # 对输入格式进行检查
-        debug_print_txt('main_log', '', input_str  +' ' + json_file_url_ + 'inside prepare_trade_record \n',True)
+        #debug_print_txt('main_log', '', input_str  +' ' + json_file_url_ + 'inside prepare_trade_record \n',True)
         if amount % 100 != 0:
             #tc.AppendText('格式错误！参考格式：\n美的集团 卖出 400 51.3')
             return
@@ -299,11 +299,11 @@ class ReseauJudge:
             json.dump(_opt_record, _f, ensure_ascii=False, indent = 2, separators=(',', ': '))
 
         # 返回
-        debug_print_txt('main_log', '', stk_code  +' end of prepare_trade_record \n',True)
+        #debug_print_txt('main_log', '', stk_code  +' end of prepare_trade_record \n',True)
         return return_str
 
     def generate_trade_records(self):
-        debug_print_txt('main_log', '', self.stk_code + ' inside generate_trade_records \n',True)
+        #debug_print_txt('main_log', '', self.stk_code + ' inside generate_trade_records \n',True)
         
         str2_ = '\nstk_code:' + self.stk_code +'\ncurrent_price:' + '%0.3f' % self.current_price + '\n卖出:' + '%0.3f' % self.sell_price + '\n买入:' + '%0.3f' % self.buy_price + '\n'
         self.add_msg(str2_)
@@ -312,7 +312,7 @@ class ReseauJudge:
         sell_input_str = self.stk_code + " 卖出 5000 " + '%0.3f' % self.sell_price
         self.prepare_trade_record(buy_input_str, easytrader_record_file_url)
         self.prepare_trade_record(sell_input_str, easytrader_record_file_url)
-        debug_print_txt('main_log', '', self.stk_code + ' end of generate_trade_records \n',True)
+        #debug_print_txt('main_log', '', self.stk_code + ' end of generate_trade_records \n',True)
         
 
     def get_pcr(self):

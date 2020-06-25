@@ -3,20 +3,41 @@ import json
 import os
 from Global_Value.file_dir import yh_client_file_url, easytrader_record_file_url
 from SDK.Debug_Sub import debug_print_txt
+import pprint
 
 class RealTrade:
     def __init__(self):
         self.user = easytrader.use('yh_client')
         self.user.prepare(yh_client_file_url)
+        self.current_record = {}
+        self.opt_dict_init = {
+            'b_opt': [],
+            's_opt': [],
+            'usable_balance': 0,
+            'has_flashed_flag': True
+        }
 
     def check_status(self):
         #result = self.user.balance()
         #print(result)
         #debug_print_txt('main_log', '', str(result[0]) + ' \n inside check_status \n',True)
         return_str = []
+        new_str = []
         return_str = self.user.position   # Don't add (), otherwise will cause error!
-        print(return_str)
+        pprint.pprint(return_str)
+        length = len(return_str)
+        for i in range(length):
+            stk_code = return_str[i]['证券代码']
+            amount = return_str[i]['可用余额']
+            #print(stk_code)
+            #print(amount)
+            self.current_record[stk_code] = {}
+            self.current_record[stk_code]['usable_balance'] = amount
+        pprint.pprint(self.current_record)
+        #print(self.current_record.keys())
         debug_print_txt('main_log', '', str(return_str) + ' \n inside check_status \n',True)
+        debug_print_txt('main_log', '', str(self.current_record) + ' \n inside check_status \n',True)
+        return self.current_record
 
     def buy(self, security, amount, price):
         """
@@ -31,9 +52,9 @@ class RealTrade:
         print(result)
 
     def sendout_trade_record(self, json_file_url_):
-        debug_print_txt('main_log', '',' inside sendout_trade_record \n',True)
+        #debug_print_txt('main_log', '',' inside sendout_trade_record \n',True)
         # 返回字符串
-        return_str = []
+        current_record = {}
 
         # 已有文件，打开读取
         if os.path.exists(json_file_url_):
@@ -42,27 +63,25 @@ class RealTrade:
         else:
             _opt_record = {}
 
-        debug_print_txt('main_log', '',' len(_opt_record):'+ str(len(_opt_record))+' inside sendout_trade_record \n',True)
+        #debug_print_txt('main_log', '',' len(_opt_record):'+ str(len(_opt_record))+' inside sendout_trade_record \n',True)
         if len(_opt_record) == 0:
-            return return_str
-        self.check_status()
+            return current_record
+        current_record = self.check_status()
 
-        for stk_code in _opt_record.keys():
-            debug_print_txt('main_log', '', stk_code +' sell sendout_trade_record \n',True)
-            
+        for stk_code in _opt_record.keys(): 
             opt_r_stk = _opt_record[stk_code]
             opt_r_stk['has_flashed_flag'] = False
-
-            debug_print_txt('main_log', '', stk_code +' flashed:' + str(opt_r_stk['has_flashed_flag'] )+' sell sendout_trade_record \n',True)
-            debug_print_txt('main_log', '', stk_code  +' len:' +str(len(opt_r_stk['b_opt'])) +' buy sendout_trade_record \n',True)
+ 
+            #debug_print_txt('main_log', '', stk_code  +' len:' +str(len(opt_r_stk['b_opt'])) +' buy sendout_trade_record \n',True)
             if len(opt_r_stk['b_opt']) != 0 and opt_r_stk['has_flashed_flag'] == False:
-                debug_print_txt('main_log', '', 'amount:' + str(opt_r_stk['b_opt'][0]['amount'])  + 'buy price:' + str(opt_r_stk['b_opt'][0]['p']) + ' buy sendout_trade_record \n',True)
+                debug_print_txt('main_log', '', stk_code + ' amount:' + str(opt_r_stk['b_opt'][0]['amount'])  + ' buy price:' + str(opt_r_stk['b_opt'][0]['p']) + ' buy sendout_trade_record \n',True)
                 #self.buy(stk_code, opt_r_stk['b_opt'][0]['amount'],  opt_r_stk['b_opt'][0]['p'])
             
-            debug_print_txt('main_log', '', stk_code  +' len:' +str(len(opt_r_stk['s_opt'])) +' buy sendout_trade_record \n',True)
-            if len(opt_r_stk['s_opt']) != 0 and opt_r_stk['has_flashed_flag'] == False:
-                debug_print_txt('main_log', '', 'amount:' + str(opt_r_stk['s_opt'][0]['amount'])  + 'sell price:' + str(opt_r_stk['s_opt'][0]['p']) + ' sell sendout_trade_record \n',True)
-                #self.sell(stk_code, opt_r_stk['s_opt'][0]['amount'],  opt_r_stk['s_opt'][0]['p'])
+            #debug_print_txt('main_log', '', stk_code  +' len:' +str(len(opt_r_stk['s_opt'])) +' sell sendout_trade_record \n',True)
+            if stk_code in current_record.keys() and current_record[stk_code]['usable_balance'] > 5000:
+                if len(opt_r_stk['s_opt']) != 0 and opt_r_stk['has_flashed_flag'] == False:
+                    debug_print_txt('main_log', '', stk_code + ' amount:' + str(opt_r_stk['s_opt'][0]['amount'])  + ' sell price:' + str(opt_r_stk['s_opt'][0]['p']) + ' sell sendout_trade_record \n',True)
+                    #self.sell(stk_code, opt_r_stk['s_opt'][0]['amount'],  opt_r_stk['s_opt'][0]['p'])
 
             opt_r_stk['has_flashed_flag'] = True
             _opt_record[stk_code] = opt_r_stk
@@ -73,8 +92,8 @@ class RealTrade:
             json.dump(_opt_record, _f)
 
         # 返回
-        debug_print_txt('main_log', '', stk_code  +' end of sendout_trade_record \n',True)
-        return return_str
+        #debug_print_txt('main_log', '', stk_code  +' end of sendout_trade_record \n',True)
+        return _opt_record
 
 
 if __name__ == "__main__":
